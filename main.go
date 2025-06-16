@@ -12,21 +12,22 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 func main() {
 
 	// CPU Usage & Info
 
-	cpu_usage, err := cpu.Percent(time.Second, false)
+	cpu_load, err := cpu.Percent(time.Second, false)
 	if err != nil {
 		log.Fatalf("Error getting CPU usage: %v", err)
 	}
-
 	cpu_info, err := cpu.Info()
 	if err != nil {
 		log.Fatalf("Error getting CPU info: %v", err)
 	}
+	cpu_usage := fmt.Sprintf("%s @ %0.2f Ghz (%0.2f%%)", strings.TrimSpace(cpu_info[0].ModelName), cpu_info[0].Mhz/1000, cpu_load[0])
 
 	// Disk Usage
 
@@ -36,24 +37,42 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error getting disk usage: %v", err)
 		}
-		free := disk.Free / (1024 * 1024 * 1024) // Convert to GB
-		total := disk.Total / (1024 * 1024 * 1024)
-		used := disk.Used / (1024 * 1024 * 1024)
-		disk_usage = fmt.Sprintf("%dGB / %dGB (%dGB free)", used, total, free)
+		free := float64(disk.Free) / (1024 * 1024 * 1024)
+		total := float64(disk.Total) / (1024 * 1024 * 1024)
+		used := float64(disk.Used) / (1024 * 1024 * 1024)
+		disk_usage = fmt.Sprintf("%0.2fGB / %0.2fGB (%0.2fGB free)", used, total, free)
 	} else if runtime.GOOS == "linux" {
 		disk, err := disk.Usage("/")
 		if err != nil {
 			log.Fatalf("Error getting disk usage: %v", err)
 		}
-		free := disk.Free / (1024 * 1024 * 1024) // Convert to GB
-		total := disk.Total / (1024 * 1024 * 1024)
-		used := disk.Used / (1024 * 1024 * 1024)
-		disk_usage = fmt.Sprintf("%dGB / %dGB (%dGB free)", used, total, free)
+		free := float64(disk.Free / (1024 * 1024 * 1024))
+		total := float64(disk.Total) / (1024 * 1024 * 1024)
+		used := float64(disk.Used) / (1024 * 1024 * 1024)
+		disk_usage = fmt.Sprintf("%0.2fGB / %0.2fGB (%0.2fGB free)", used, total, free)
 	} else {
 		log.Fatalf("Unsupported OS: %s. Please submit a pull request at github.com/AyeBeara/GoFetch", runtime.GOOS)
 	}
 
 	// Memory Usage
+
+	memory, err := mem.VirtualMemory()
+	if err != nil {
+		log.Fatalf("Error getting memory usage: %v", err)
+	}
+	free := float64(memory.Available) / (1024 * 1024 * 1024)
+	total := float64(memory.Total) / (1024 * 1024 * 1024)
+	used := float64(memory.Used) / (1024 * 1024 * 1024)
+	memory_usage := fmt.Sprintf("%0.2fGB / %0.2fGB (%0.2fGB free)", used, total, free)
+
+	swp, err := mem.SwapMemory()
+	if err != nil {
+		log.Fatalf("Error getting swap memory usage: %v", err)
+	}
+	free = float64(swp.Free) / (1024 * 1024 * 1024)
+	total = float64(swp.Total) / (1024 * 1024 * 1024)
+	used = float64(swp.Used) / (1024 * 1024 * 1024)
+	swp_usage := fmt.Sprintf("[%0.2fGB / %0.2fGB (%0.2fGB free) SWAP]", used, total, free)
 
 	// Current User
 
@@ -85,33 +104,33 @@ func main() {
 	resources := []pterm.BulletListItem{
 		{
 			Level:     0,
-			Text:      fmt.Sprintf("User: %s", user.Username),
+			Text:      user.Username,
 			TextStyle: pterm.NewStyle(pterm.FgLightBlue),
 			Bullet:    "👤  ",
 		},
 		{
 			Level:     0,
-			Text:      fmt.Sprintf("OS: %s", os_version),
+			Text:      os_version,
 			TextStyle: pterm.NewStyle(pterm.FgCyan),
 			Bullet:    "🖥️   ",
 		},
 		{
 			Level:     0,
-			Text:      fmt.Sprintf("CPU Model: %s", cpu_info[0].ModelName),
+			Text:      cpu_usage,
 			TextStyle: pterm.NewStyle(pterm.FgYellow),
 			Bullet:    "⚙️   ",
-		},
-		{
-			Level:     0,
-			Text:      fmt.Sprintf("CPU Usage: %0.2f%%", cpu_usage[0]),
-			TextStyle: pterm.NewStyle(pterm.FgGreen),
-			Bullet:    "📈  ",
 		},
 		{
 			Level:     0,
 			Text:      disk_usage,
 			TextStyle: pterm.NewStyle(pterm.FgMagenta),
 			Bullet:    "💾  ",
+		},
+		{
+			Level:     0,
+			Text:      memory_usage + " " + swp_usage,
+			TextStyle: pterm.NewStyle(pterm.FgLightYellow),
+			Bullet:    "🧠  ",
 		},
 	}
 
