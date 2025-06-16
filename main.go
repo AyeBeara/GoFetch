@@ -182,7 +182,7 @@ func main() {
 
 	// Display
 
-	area, _ := pterm.DefaultArea.WithFullscreen().Start()
+	area, _ := pterm.DefaultArea.Start()
 	defer area.Stop()
 
 	if len(os.Args) > 1 && (os.Args[1] == "-l" || os.Args[1] == "--live") {
