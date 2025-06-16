@@ -2,7 +2,10 @@ module github.com/ayebeara/gofetch
 
 go 1.24.3
 
-require github.com/shirou/gopsutil/v4 v4.25.5
+require (
+	github.com/pterm/pterm v0.12.81
+	github.com/shirou/gopsutil/v4 v4.25.5
+)
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
@@ -16,7 +19,6 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/pterm/pterm v0.12.81 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
