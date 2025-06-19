@@ -130,9 +130,9 @@ func get_gpu_usage(gpu_chan chan map[string]int) {
 			gpu_usage = fmt.Sprintf("%s %0.2fGB / %0.2fGB (%0.2fGB Free) [%d%% Utilization]", parts[0], used, total, free, load)
 			gpu_load = load
 		case strings.Contains(strings.ToLower(string(out)), "amd"):
-			// TODO: Implement AMD GPU usage retrieval
+			// TODO: Implement AMD GPU usage retrieval for Windows
 		case strings.Contains(strings.ToLower(string(out)), "intel"):
-			// TODO: Implement Intel GPU usage retrieval
+			// TODO: Implement Intel GPU usage retrieval for Windows
 		}
 	} else if runtime.GOOS == "linux" {
 
@@ -142,7 +142,9 @@ func get_gpu_usage(gpu_chan chan map[string]int) {
 		}
 		switch {
 		case strings.Contains(strings.ToLower(string(out)), "nvidia"):
+			// TODO: Implemend NVIDIA GPU usage retrieval for Linux
 		case strings.Contains(strings.ToLower(string(out)), "amd"):
+			// TODO: Implement AMD GPU usage retrieval for Linux
 		case strings.Contains(strings.ToLower(string(out)), "intel"):
 			cmd := exec.Command("grep", "-oP", "(?<=:\\s).*(?=\\s\\()")
 			stdin, err := cmd.StdinPipe()
@@ -179,6 +181,7 @@ func get_gpu_usage(gpu_chan chan map[string]int) {
 			stdout.Close()
 			cancel()
 			cmd.Process.Kill()
+			cmd.Wait()
 
 			line := scanner.Text()
 

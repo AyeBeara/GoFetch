@@ -5,7 +5,7 @@ A simple sysfetch script written in Golang
 ```bash
 Usage: GoFetch [options]
 Options:
-  -l, --live    Display system information in live mode (updates every)
+  -l, --live    Display system information in live mode
   -h, --help    Display this help message
 Displays system information in a terminal-friendly format.
 Press Ctrl+C to exit.
