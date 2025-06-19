@@ -162,8 +162,19 @@ func get_gpu_usage(gpu_chan chan map[string]int) {
 			gpu_usage = strings.TrimSpace(string(out))
 
 			ctx, cancel := context.WithCancel(context.Background())
-			out, err = exec.CommandContext(ctx, "intel_gpu_top", "-c").Output()
+			cmd = exec.CommandContext(ctx, "intel_gpu_top", "-c")
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				log.Fatalf("Error creating stdout pipe: %v", err)
+			}
+
+			if err := cmd.Start(); err != nil {
+				log.Fatalf("Error starting intel_gpu_top: %v", err)
+			}
+
 			cancel()
+
+			out, err = io.ReadAll(stdout)
 			if err != nil {
 				log.Fatalf("Error getting Intel GPU usage: %v", err)
 			}
