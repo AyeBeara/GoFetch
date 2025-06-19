@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -135,7 +136,7 @@ func get_gpu_usage(gpu_chan chan map[string]int) {
 		}
 	} else if runtime.GOOS == "linux" {
 
-		out, err := exec.Command("lspci", "-vnn", "-s", "00:02.0").Output()
+		out, err := exec.Command("lspci", "-s", "00:02.0").Output()
 		if err != nil {
 			log.Fatalf("Error detecting GPU: %v", err)
 		}
@@ -162,7 +163,7 @@ func get_gpu_usage(gpu_chan chan map[string]int) {
 			gpu_usage = strings.TrimSpace(string(out))
 
 			ctx, cancel := context.WithCancel(context.Background())
-			cmd = exec.CommandContext(ctx, "intel_gpu_top", "-c")
+			cmd = exec.CommandContext(ctx, "sudo", "intel_gpu_top", "-c")
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
 				log.Fatalf("Error creating stdout pipe: %v", err)
@@ -172,16 +173,22 @@ func get_gpu_usage(gpu_chan chan map[string]int) {
 				log.Fatalf("Error starting intel_gpu_top: %v", err)
 			}
 
+			scanner := bufio.NewScanner(stdout)
+			scanner.Scan()
+			scanner.Scan()
+			stdout.Close()
 			cancel()
+			cmd.Process.Kill()
 
-			out, err = io.ReadAll(stdout)
-			if err != nil {
-				log.Fatalf("Error getting Intel GPU usage: %v", err)
-			}
-			gpu_load, err = strconv.Atoi(strings.Split(strings.Split(strings.TrimSpace(string(out)), "\n")[1], ",")[8])
+			line := scanner.Text()
+
+			load, err := strconv.ParseFloat(strings.Split(strings.TrimSpace(string(line)), ",")[8], 64)
 			if err != nil {
 				log.Fatalf("Error parsing Intel GPU load: %v", err)
 			}
+
+			gpu_usage += fmt.Sprintf(" [%0.2f%% Utilization]", load)
+			gpu_load = int(load)
 		}
 	}
 	gpu_chan <- map[string]int{gpu_usage: gpu_load}
@@ -331,12 +338,11 @@ func main() {
 	if len(os.Args) > 1 && (os.Args[1] == "-l" || os.Args[1] == "--live") {
 		for {
 			render(area, channels)
-			time.Sleep(time.Second)
 		}
 	} else if len(os.Args) > 1 && (os.Args[1] == "--help" || os.Args[1] == "-h") {
 		fmt.Println("Usage: GoFetch [options]")
 		fmt.Println("Options:")
-		fmt.Println("  -l, --live    Display system information in live mode (updates every second)")
+		fmt.Println("  -l, --live    Display system information in live mode")
 		fmt.Println("  -h, --help    Display this help message")
 		fmt.Println("Displays system information in a terminal-friendly format.")
 		fmt.Println("Press Ctrl+C to exit.")
