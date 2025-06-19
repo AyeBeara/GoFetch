@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -134,7 +135,7 @@ func get_gpu_usage(gpu_chan chan map[string]int) {
 		}
 	} else if runtime.GOOS == "linux" {
 
-		out, err := exec.Command("lspci", "-s 00:02.0 | grep -oP '(?<=:\\s).*(?=\\s\\()'").Output()
+		out, err := exec.Command("lspci", "-vnn", "-s", "00:02.0").Output()
 		if err != nil {
 			log.Fatalf("Error detecting GPU: %v", err)
 		}
@@ -142,8 +143,26 @@ func get_gpu_usage(gpu_chan chan map[string]int) {
 		case strings.Contains(strings.ToLower(string(out)), "nvidia"):
 		case strings.Contains(strings.ToLower(string(out)), "amd"):
 		case strings.Contains(strings.ToLower(string(out)), "intel"):
+			cmd := exec.Command("grep", "-oP", "(?<=:\\s).*(?=\\s\\()")
+			stdin, err := cmd.StdinPipe()
+			if err != nil {
+				log.Fatalf("Error creating stdin pipe: %v", err)
+			}
+
+			go func() {
+				defer stdin.Close()
+				io.WriteString(stdin, strings.TrimSpace(string(out)))
+			}()
+
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				log.Fatalf("Error getting Intel GPU name: %v", err)
+			}
+
+			gpu_usage = strings.TrimSpace(string(out))
+
 			ctx, cancel := context.WithCancel(context.Background())
-			out, err := exec.CommandContext(ctx, "intel_gpu_top", "-c").Output()
+			out, err = exec.CommandContext(ctx, "intel_gpu_top", "-c").Output()
 			cancel()
 			if err != nil {
 				log.Fatalf("Error getting Intel GPU usage: %v", err)
